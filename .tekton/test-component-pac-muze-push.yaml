@@ -21,7 +21,7 @@ spec:
   - name: revision
     value: '{{revision}}'
   - name: output-image
-    value: quay.io/redhat-appstudio-qe/test-images:{{revision}}
+    value: quay.io/redhat-appstudio-qe/test-images@sha256:{{revision}}
   - name: dockerfile
     value: docker/Dockerfile
   - name: path-context
