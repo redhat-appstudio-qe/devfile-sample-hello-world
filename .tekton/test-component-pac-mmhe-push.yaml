@@ -1,0 +1,47 @@
+apiVersion: tekton.dev/v1beta1
+kind: PipelineRun
+metadata:
+  annotations:
+    build.appstudio.redhat.com/commit_sha: '{{revision}}'
+    build.appstudio.redhat.com/target_branch: '{{target_branch}}'
+    pipelinesascode.tekton.dev/max-keep-runs: "3"
+    pipelinesascode.tekton.dev/on-event: '[push]'
+    pipelinesascode.tekton.dev/on-target-branch: '[main,master]'
+  creationTimestamp: null
+  labels:
+    appstudio.openshift.io/application: build-suite-test-application-ahuj
+    appstudio.openshift.io/component: test-component-pac-mmhe
+    pipelines.appstudio.openshift.io/type: build
+  name: test-component-pac-mmhe-on-push
+  namespace: build-e2e-kclh
+spec:
+  params:
+  - name: git-url
+    value: '{{repo_url}}'
+  - name: revision
+    value: '{{revision}}'
+  - name: output-image
+    value: quay.io/redhat-appstudio-qe/test-images:{{revision}}
+  - name: dockerfile
+    value: docker/Dockerfile
+  - name: path-context
+    value: .
+  pipelineRef:
+    bundle: quay.io/redhat-appstudio-tekton-catalog/pipeline-docker-build:46e71a2b4f942beb25a8991d67861bc175a16de6
+    name: docker-build
+  workspaces:
+  - name: workspace
+    volumeClaimTemplate:
+      metadata:
+        creationTimestamp: null
+      spec:
+        accessModes:
+        - ReadWriteOnce
+        resources:
+          requests:
+            storage: 1Gi
+      status: {}
+  - name: registry-auth
+    secret:
+      secretName: redhat-appstudio-registry-pull-secret
+status: {}
