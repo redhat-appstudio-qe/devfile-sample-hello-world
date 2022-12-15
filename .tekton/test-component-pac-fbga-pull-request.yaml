@@ -17,16 +17,16 @@ metadata:
   namespace: build-e2e-chho
 spec:
   params:
-  - name: git-url
-    value: '{{repo_url}}'
-  - name: revision
-    value: '{{revision}}'
   - name: output-image
     value: quay.io/redhat-appstudio-qe/test-images:on-pr-{{revision}}
   - name: dockerfile
     value: docker/Dockerfile
   - name: path-context
     value: .
+  - name: git-url
+    value: '{{repo_url}}'
+  - name: revision
+    value: '{{revision}}'
   pipelineSpec:
     finally:
     - name: show-summary

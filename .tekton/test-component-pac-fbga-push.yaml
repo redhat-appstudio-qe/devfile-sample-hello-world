@@ -16,6 +16,8 @@ metadata:
   namespace: build-e2e-chho
 spec:
   params:
+  - name: output-image
+    value: quay.io/redhat-appstudio-qe/test-images:{{revision}}
   - name: dockerfile
     value: docker/Dockerfile
   - name: path-context
@@ -24,8 +26,6 @@ spec:
     value: '{{repo_url}}'
   - name: revision
     value: '{{revision}}'
-  - name: output-image
-    value: quay.io/redhat-appstudio-qe/test-images:{{revision}}
   pipelineSpec:
     finally:
     - name: show-summary
