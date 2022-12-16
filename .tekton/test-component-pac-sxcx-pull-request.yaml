@@ -17,8 +17,6 @@ metadata:
   namespace: build-e2e-ivuw
 spec:
   params:
-  - name: git-url
-    value: '{{repo_url}}'
   - name: revision
     value: '{{revision}}'
   - name: output-image
@@ -27,6 +25,8 @@ spec:
     value: docker/Dockerfile
   - name: path-context
     value: .
+  - name: git-url
+    value: '{{repo_url}}'
   pipelineSpec:
     finally:
     - name: show-summary
