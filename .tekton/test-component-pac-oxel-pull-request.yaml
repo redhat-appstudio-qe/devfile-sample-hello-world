@@ -17,16 +17,16 @@ metadata:
   namespace: build-e2e-qful
 spec:
   params:
-  - name: dockerfile
-    value: docker/Dockerfile
-  - name: path-context
-    value: .
   - name: git-url
     value: '{{repo_url}}'
   - name: revision
     value: '{{revision}}'
   - name: output-image
     value: quay.io/redhat-appstudio-qe/test-images:on-pr-{{revision}}
+  - name: dockerfile
+    value: docker/Dockerfile
+  - name: path-context
+    value: .
   pipelineSpec:
     finally:
     - name: show-summary
