@@ -1,0 +1,171 @@
+apiVersion: tekton.dev/v1beta1
+kind: PipelineRun
+metadata:
+  annotations:
+    build.appstudio.redhat.com/commit_sha: '{{revision}}'
+    build.appstudio.redhat.com/target_branch: '{{target_branch}}'
+    pipelinesascode.tekton.dev/max-keep-runs: "3"
+    pipelinesascode.tekton.dev/on-event: '[push]'
+    pipelinesascode.tekton.dev/on-target-branch: '[main,master]'
+  creationTimestamp: null
+  labels:
+    appstudio.openshift.io/application: build-suite-test-application-grpq
+    appstudio.openshift.io/component: test-component-pac-aely
+    pipelines.appstudio.openshift.io/type: build
+  name: test-component-pac-aely-on-push
+  namespace: build-e2e-kalk
+spec:
+  params:
+  - name: dockerfile
+    value: docker/Dockerfile
+  - name: git-url
+    value: '{{repo_url}}'
+  - name: output-image
+    value: quay.io/redhat-appstudio-qe/test-images:{{revision}}
+  - name: path-context
+    value: .
+  - name: revision
+    value: '{{revision}}'
+  pipelineSpec:
+    finally:
+    - name: show-summary
+      params:
+      - name: pipeline-run-name
+        value: $(context.pipelineRun.name)
+      - name: git-url
+        value: $(params.git-url)
+      - name: image-url
+        value: $(params.output-image)
+      taskRef:
+        bundle: quay.io/redhat-appstudio/appstudio-tasks:9f5d549dd64aacf10e3baac90972dfd5df788324-2@sha256:de38a62826928913d5a30ba5e399fc58fe68c39c8eded5edb3ef38b4d54c554b
+        name: summary
+    params:
+    - description: Source Repository URL
+      name: git-url
+      type: string
+    - default: ""
+      description: Revision of the Source Repository
+      name: revision
+      type: string
+    - description: Fully Qualified Output Image
+      name: output-image
+      type: string
+    - default: .
+      description: The path to your source code
+      name: path-context
+      type: string
+    - default: Dockerfile
+      description: Path to the Dockerfile
+      name: dockerfile
+      type: string
+    - default: "false"
+      description: Force rebuild image
+      name: rebuild
+      type: string
+    results:
+    - description: ""
+      name: IMAGE_URL
+      value: $(tasks.build-container.results.IMAGE_URL)
+    - description: ""
+      name: IMAGE_DIGEST
+      value: $(tasks.build-container.results.IMAGE_DIGEST)
+    - description: ""
+      name: CHAINS-GIT_URL
+      value: $(tasks.clone-repository.results.url)
+    - description: ""
+      name: CHAINS-GIT_COMMIT
+      value: $(tasks.clone-repository.results.commit)
+    tasks:
+    - name: appstudio-init
+      params:
+      - name: image-url
+        value: $(params.output-image)
+      - name: rebuild
+        value: $(params.rebuild)
+      taskRef:
+        bundle: quay.io/redhat-appstudio/appstudio-tasks:9f5d549dd64aacf10e3baac90972dfd5df788324-2@sha256:de38a62826928913d5a30ba5e399fc58fe68c39c8eded5edb3ef38b4d54c554b
+        name: init
+    - name: clone-repository
+      params:
+      - name: url
+        value: $(params.git-url)
+      - name: revision
+        value: $(params.revision)
+      runAfter:
+      - appstudio-init
+      taskRef:
+        bundle: quay.io/redhat-appstudio/appstudio-tasks:9f5d549dd64aacf10e3baac90972dfd5df788324-1@sha256:f7c925f304fd24aac88ce7d453fe10a252520dd9c5d727b49d48e9f7075f2a97
+        name: git-clone
+      when:
+      - input: $(tasks.appstudio-init.results.build)
+        operator: in
+        values:
+        - "true"
+      workspaces:
+      - name: output
+        workspace: workspace
+      - name: basic-auth
+        workspace: git-auth
+    - name: appstudio-configure-build
+      runAfter:
+      - clone-repository
+      taskRef:
+        bundle: quay.io/redhat-appstudio/appstudio-tasks:9f5d549dd64aacf10e3baac90972dfd5df788324-1@sha256:f7c925f304fd24aac88ce7d453fe10a252520dd9c5d727b49d48e9f7075f2a97
+        name: configure-build
+      when:
+      - input: $(tasks.appstudio-init.results.build)
+        operator: in
+        values:
+        - "true"
+      workspaces:
+      - name: source
+        workspace: workspace
+      - name: registry-auth
+        workspace: registry-auth
+    - name: build-container
+      params:
+      - name: IMAGE
+        value: $(params.output-image)
+      - name: DOCKERFILE
+        value: $(params.dockerfile)
+      - name: CONTEXT
+        value: $(params.path-context)
+      - name: BUILD_EXTRA_ARGS
+        value: $(tasks.appstudio-configure-build.results.buildah-auth-param)
+      - name: PUSH_EXTRA_ARGS
+        value: $(tasks.appstudio-configure-build.results.buildah-auth-param)
+      runAfter:
+      - appstudio-configure-build
+      taskRef:
+        bundle: quay.io/redhat-appstudio/appstudio-tasks:9f5d549dd64aacf10e3baac90972dfd5df788324-1@sha256:f7c925f304fd24aac88ce7d453fe10a252520dd9c5d727b49d48e9f7075f2a97
+        name: buildah
+      when:
+      - input: $(tasks.appstudio-init.results.build)
+        operator: in
+        values:
+        - "true"
+      workspaces:
+      - name: source
+        workspace: workspace
+    workspaces:
+    - name: workspace
+    - name: registry-auth
+      optional: true
+    - name: git-auth
+      optional: true
+  workspaces:
+  - name: workspace
+    volumeClaimTemplate:
+      metadata:
+        creationTimestamp: null
+      spec:
+        accessModes:
+        - ReadWriteOnce
+        resources:
+          requests:
+            storage: 1Gi
+      status: {}
+  - name: registry-auth
+    secret:
+      secretName: redhat-appstudio-registry-pull-secret
+status: {}
